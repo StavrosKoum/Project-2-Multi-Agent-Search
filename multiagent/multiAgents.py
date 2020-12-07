@@ -77,8 +77,8 @@ class ReflexAgent(Agent):
         "*** YOUR CODE HERE ***"
         #take the new score and the current so we can calculate the dif
         newScore = successorstate.getScore()
-        currentScore = scoreEvaluationFunction(currentstate)
-        score = newScore - currentScore
+        cur_score = scoreEvaluationFunction(currentstate)
+        score = newScore - cur_score
         
         #find the closest ghost
         closer_ghost = min([manhattanDistance(newPos, ghost.getPosition()) for ghost in newGhostStates])
@@ -206,16 +206,16 @@ class MinimaxAgent(MultiAgentSearchAgent):
         
         #call min the first time at the root
         
-        currentScore = -999999
+        cur_score = -999999
         actions = state.getLegalActions(0)
         for action in actions:
             nextState = state.generateSuccessor(0,action)
             score = min_funct(nextState,0,1)
             
             #keep the action with the max score
-            if score > currentScore:
+            if score > cur_score:
                 ret_action = action
-                currentScore = score
+                cur_score = score
         return ret_action
         util.raiseNotDefined()
 
@@ -285,7 +285,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
         
         #call min the first time at the root
         
-        currentScore = -100000
+        cur_score = -100000
         alpha = -100000
         beta = 100000
         actions = state.getLegalActions(0)
@@ -294,9 +294,9 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
             score = min_funct(nextState,0,1,alpha,beta)
             
             #keep the action with the max score
-            if score > currentScore:
+            if score > cur_score:
                 ret_action = action
-                currentScore = score
+                cur_score = score
             
             #upbate alpha
             if score > beta:
@@ -327,7 +327,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
             currDepth = depth + 1
 
             #cheack if we have to terminate 
-            if state.isWin() or state.isLose() or currDepth==self.depth:   #Terminal Test 
+            if state.isWin() or state.isLose() or currDepth==self.depth:   
                 return self.evaluationFunction(state)
             
             maxvalue = -100000
@@ -345,35 +345,34 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
             agents_count = state.getNumAgents()
             legalActions = state.getLegalActions(agentIndex)
 
-            if state.isWin() or state.isLose():   #Terminal Test 
+            if state.isWin() or state.isLose():   
                 return self.evaluationFunction(state)
 
-            #expected value and the probabilyt
-            expectedValue = 0
-            probabilty = 1.0 / len(legalActions) #probability of each action
-            # pacman is the last to move after all ghost movement
+            
+            expect_value = 0
+            probabilty = 1.0 / len(legalActions) #so we can multiply with exp_value
+            #take all actions and call max or expect
             for action in legalActions:
                 if agentIndex == agents_count - 1:
-                    currentExpValue =  max_funct(state.generateSuccessor(agentIndex, action),  depth)
+                    cur_expect_value =  max_funct(state.generateSuccessor(agentIndex, action),  depth)
                 else:
-                    currentExpValue = expValue(state.generateSuccessor(agentIndex, action), depth, agentIndex + 1)
-                expectedValue += currentExpValue * probabilty
+                    cur_expect_value = expValue(state.generateSuccessor(agentIndex, action), depth, agentIndex + 1)
+                expect_value += cur_expect_value * probabilty
 
-            return expectedValue
+            return expect_value
         
-        #Root level action.
+        #call first time
         actions = state.getLegalActions(0)
-        currentScore = -999999
-        returnAction = ''
+        cur_score = -100000
         for action in actions:
             nextState = state.generateSuccessor(0,action)
-            # Next level is a expect level. Hence calling expectLevel for successors of the root.
+            # call expValue
             score = expValue(nextState,0,1)
-            # Choosing the action which is Maximum of the successors.
-            if score > currentScore:
-                returnAction = action
-                currentScore = score
-        return returnAction
+            # take the best action
+            if score > cur_score:
+                ret_action = action
+                cur_score = score
+        return ret_action
 
         util.raiseNotDefined()
 
@@ -383,8 +382,53 @@ def betterEvaluationFunction(currentstate):
     evaluation function (question 5).
 
     DESCRIPTION: <write something here so we know what you did>
+    
+    I took the food distance and the closest ghost
+    When the food dist is long the score gets smaller
+    when the ghost is far the score gets bigger
     """
+    
+    
+    
     "*** YOUR CODE HERE ***"
+    if currentstate.isWin():
+        return 10000
+    
+    #take info fron currentstate
+    cur_pos = currentstate.getPacmanPosition()
+    cur_food = currentstate.getFood().asList()
+    cur_ghost_states = currentstate.getGhostStates()
+    cur_scared_times = [ghostState.scaredTimer for ghostState in cur_ghost_states]
+
+    cur_capsule = currentstate.getCapsules()
+
+    #take the new score and the current so we can calculate the dif
+    #newScore = successorstate.getScore()
+    cur_score = scoreEvaluationFunction(currentstate)
+    score = cur_score
+
+    #find the closest ghost
+    closer_ghost = min([manhattanDistance(cur_pos, ghost.getPosition()) for ghost in cur_ghost_states])
+
+    #find closest food
+    if cur_food:
+        closeFoodDist = min([manhattanDistance(cur_pos, food) for food in cur_food])
+    else:
+        closeFoodDist = 0
+
+    #see if we can eat ghosts
+    smallScareTime = min(cur_scared_times)
+    if smallScareTime != 0:
+        closer_ghost = 0
+        
+    #the grater the food dist the smaller the score
+    ret_num = (10/(closeFoodDist+1)) #plus one so its not divided with zero
+    #the further the ghost is the greater the score
+    ret_num = ret_num +(closer_ghost/10)
+    ret_num = ret_num + score
+    return ret_num
+
+
     util.raiseNotDefined()
 
 # Abbreviation
