@@ -319,6 +319,62 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         legal moves.
         """
         "*** YOUR CODE HERE ***"
+        
+    
+        #agent is always 0
+        def max_funct(state,depth):
+            #add one for next depth
+            currDepth = depth + 1
+
+            #cheack if we have to terminate 
+            if state.isWin() or state.isLose() or currDepth==self.depth:   #Terminal Test 
+                return self.evaluationFunction(state)
+            
+            maxvalue = -100000
+            actions = state.getLegalActions(0)
+            for action in actions:
+                successor= state.generateSuccessor(0,action)
+                #call min
+                min_ret = expValue(successor,currDepth,1)
+                #find the max value
+                maxvalue = max (maxvalue,min_ret)
+            return maxvalue
+
+        def expValue(state,depth ,agentIndex ):
+            
+            agents_count = state.getNumAgents()
+            legalActions = state.getLegalActions(agentIndex)
+
+            if state.isWin() or state.isLose():   #Terminal Test 
+                return self.evaluationFunction(state)
+
+            #expected value and the probabilyt
+            expectedValue = 0
+            probabilty = 1.0 / len(legalActions) #probability of each action
+            # pacman is the last to move after all ghost movement
+            for action in legalActions:
+                if agentIndex == agents_count - 1:
+                    currentExpValue =  max_funct(state.generateSuccessor(agentIndex, action),  depth)
+                else:
+                    currentExpValue = expValue(state.generateSuccessor(agentIndex, action), depth, agentIndex + 1)
+                expectedValue += currentExpValue * probabilty
+
+            return expectedValue
+        
+        #Root level action.
+        actions = state.getLegalActions(0)
+        currentScore = -999999
+        returnAction = ''
+        for action in actions:
+            nextState = state.generateSuccessor(0,action)
+            # Next level is a expect level. Hence calling expectLevel for successors of the root.
+            score = expValue(nextState,0,1)
+            # Choosing the action which is Maximum of the successors.
+            if score > currentScore:
+                returnAction = action
+                currentScore = score
+        return returnAction
+
         util.raiseNotDefined()
 
 def betterEvaluationFunction(currentstate):
